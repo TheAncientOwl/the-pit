@@ -1,0 +1,61 @@
+# =============================== #
+#   ThePit developed by Bufnita   #
+# =============================== #
+#{PITLVL} -> placeholder that will be replaced in chat with player's level
+
+#Minimum streak that a player needs to have in order to be bountied (default 5)
+minStreakToBeBountied: 5
+
+#The chance of a player with minStreakToBeBountied to be bountied (default 40)
+chanceToBeBountied: 40
+
+#The chance of armor drop on player death (default 100)
+armorDropChance: 100
+
+#The interval (in ticks, 1 second = 20 ticks) between data saving
+#Default scheduled for 10 minutes (12000 ticks)
+dataSaveInterval: 12000
+
+# ====== #
+# Combat #
+# ====== #
+#How long (in seconds) combat should be?
+combatTime: 15
+
+#The interval (in ticks, 1 second = 20 ticks) between checking if a player combat time has ended
+#Default scheduled to 3 seconds (60 ticks)
+combatCheckInterval: 60
+
+#Commands that can be used during combat
+whitelistedCommands:
+  - "/msg"
+  - "/r"
+  - "/helpop"
+
+# === #
+# TAB #
+# === #
+tabPrefix: "tab player {name} tabprefix {value}"
+tagPrefix: "tab player {name} tagprefix {value}"
+tabSuffix: "tab player {name} tabsuffix {value}"
+tagSuffix: "tab player {name} tagsuffix {value}"
+clear: "tab player {name} remove"
+
+#Commands that start with this won't be shown in console. (this prevents console spamming)
+tabMessagePrefix: "tab"
+
+registeredTabPrefixes:
+  - "admin"
+  - "moderator"
+  - "helper"
+
+customTabPrefix:
+  admin:
+    permission: "pit.tab.admin"
+    prefix: " &c"
+  moderator:
+    permission: "pit.tab.moderator"
+    prefix: " &2"
+  helper:
+    permission: "pit.tab.helper"
+    prefix: " &3"

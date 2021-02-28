@@ -1,0 +1,37 @@
+# =============== #
+#  GAME MESSAGES  #
+# =============== #
+kill: "&a&lKILL! &7on {player} &b+{xp-amount}XP &6+{gold-amount}g"
+doubleKill: "&a&lDOUBLE KILL! &7on {player} &b+{xp-amount}XP &6+{gold-amount}g"
+tripleKill: "&a&lTRIPLE KILL! &7on {player} &b+{xp-amount}XP &6+{gold-amount}g"
+quadrupleKill: "&a&lQUADRUPLE KILL! &7on {player} &b+{xp-amount}XP &6+{gold-amount}g"
+pentaKill: "&a&lPENTA KILL! &7on {player} &b+{xp-amount}XP &6+{gold-amount}g"
+multiKill: "&a&lMULTI KILL! &7on {player} &b+{xp-amount}XP &6+{gold-amount}g"
+assist: "&a&lASSIST! &7{percentage}% on {player} &b+{xp-amount}XP &6+{gold-amount}g"
+streak: "&c&lSTREAK! &7of &5{number} &7kills by {player}"
+bounty: "&6&lBOUNTY! &7bump &6&l{value} &7on {player} &7to high streak"
+bountyClaimed: "&6&lBOUNTY CLAIMED! {killer} &7killed {victim} &7for &6&l{bounty}g"
+levelUpTitle: "&b&lLEVEL UP!"
+levelUpChat: "&b&lPIT LEVEL UP!"
+
+# ========= #
+# COMMANDS  #
+# ========= #
+prefix: "&e&lThePit &8&l> "
+noPermission: "&cYou don't have permission to do this&8!"
+wrongCommand: "&cWrong command&8!"
+playerNotOnline: "&cThis player is not online&8!"
+notANumber: "&cNot a number&8!"
+reload: "&7Reloaded&8!"
+goldAdded: "&7Gold successfully added&8!"
+goldSet: "&7Gold successfully set&8!"
+xpAdded: "&7XP successfully added&8!"
+xpSet: "&7XP successfully set&8!"
+renownAdded: "&7Renown successfully added&8!"
+renownSet: "&7Renown successfully set&8!"
+maxLevel: "&cMax level is 120&8!"
+minLevel: "&cMin level is 1&8!"
+levelSet: "&7Level successfully set&8!"
+maxPrestige: "&cMax prestige is 30&8!"
+minPrestige: "&cMin prestige is 0&8!"
+prestigeSet: "&7Prestige successfully set&8!"

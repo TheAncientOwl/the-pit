@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="maven-antrun-" default="main"  >
+<target name="main">
+  <copy file="c:\Users\valer\Desktop\ThePitProject\ThePit\target/ThePit-1.0-SNAPSHOT.jar" todir="C:\Users\valer\Desktop\ThePitProject\Server\plugins"/>
+</target>
+</project>

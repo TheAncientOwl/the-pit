@@ -1,0 +1,11 @@
+balance: 0.0
+level: 1
+neededXP: 15
+prestige: 0
+renown: 0
+ownedPerks:
+- "a"
+- "b"
+perksInUse:
+- "a"
+- "b"
