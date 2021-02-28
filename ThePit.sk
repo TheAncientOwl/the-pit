@@ -1,0 +1,1537 @@
+#Dev: Bufnita aka TheAncientOwl
+#Version: 0.4.4
+#-> Added Renown perks <-#
+options:
+	error: &cSyntax error!
+	cmdColor: &7
+	cmdPrefix: &8[&e&l!&8]&a/pit
+	pn: &b<player> &3<number>
+	ender_chest_min_level: 15
+	kill-xp: 15
+	kill-gold: 15
+	assist-gold: 5
+	assist-xp: 5
+	bounty-multiplicator: 50
+	minStreakToBeBountied: 5
+	kill-sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+	chat-format: "{prestige}[{color}{level}{prestige}] {prefix}{player} &8&l- &7{message}"
+	name-format: "{prestige}[{color}{level}{prestige}] {prefix}{player}"
+	nametag-format: "{prestige_color}[{level_color}{level}{prestige_color}] {prefix}"
+	bounty-nametag-format: "&r &6&l${gold}"
+	message-item-purchase: "&a&lPurchased &7{item} for &6{gold}g"
+	message-not-enough-gold: "&c&lNot enough gold &7to buy {item}"
+	messageUpgradePurchased: &a&lUpgrade purchased!
+	messageMaxUpgrade: &c&lMax Upgrade!
+	messageNotEnoughGoldToUpgrade: &c&lNot enough gold to upgrade!
+	messagePerkBought: &a&lPerk purchased!
+	messagePerkNotEnoughGold: &c&lNou enough gold to buy this perk!
+	delayBetweenGoldSpawn: 20
+	spawnedGoldValue: 10
+	chanceToDropArmor: 100
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#                  ON					  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+# DEATH EVENTS
+on damage of player:
+	if damage cause is fall:
+		cancel event
+	if damage cause is void:
+		cancel event
+		teleport victim to {pit.spawn}
+		kill victim
+		heal victim by 10 hearts
+	set {_uuid} to uuid of victim
+	if {passive-upgrades.%{_uuid}%.damage-reduction} > 0:
+		set {_lvl} to {passive-upgrades.%{_uuid}%.damage-reduction}
+		set {_dmgREDUCTION} to ({_lvl} + 2) / 100
+		remove {_dmgREDUCTION} from damage	
+	if damage cause is attack:
+		if player_has_perk(attacker, "kung-fu-knowledge") is true:
+			if attacker's held item is air:
+				set {_dmg} to 40
+				damage victim by {_dmg}
+		if player_has_perk(attacker, "barbarian") is true:
+			if attacker's held item is iron_axe:
+				set {_dmg} to damage / 2
+				add {_dmg} to damage
+		if {pit.%uuid of victim%.streak} >= {@minStreakToBeBountied}:
+			if attacker's held item is a diamond_sword:
+				set {_dmgDMD} to damage / 5
+				add damage to {_dmgDMD}
+				set damage to 0
+				remove 0.5 from {_dmgDMD}
+				damage victim by {_dmgDMD}
+		if attacker's held item is a sword:
+			set {_uuid} to uuid of attacker
+			if {passive-upgrades.%{_uuid}%.melee-damage} > 0:
+				set {_lvl} to {passive-upgrades.%{_uuid}%.melee-damage}
+				set {_dmgSWORD} to ({_lvl} + 1) / 100
+				add damage to {_dmgSWORD}
+				set damage to 0
+				damage victim by {_dmgSWORD}
+		if player_use_perk(attacker, "vampire") is true:
+			heal the attacker by 0.5 hearts
+	
+	if "%damage cause%" is "projectile":
+		set {_uuid} to uuid of attacker
+		if {passive-upgrades.%{_uuid}%.bow-damage} > 0:
+			set {_lvl} to {passive-upgrades.%{_uuid}%.melee-damage}
+			set {_dmgBOW} to ({_lvl} + 1) / 100
+			add damage to {_dmgBOW}
+			set damage to 0
+			damage victim by {_dmgBOW}
+		if player_use_perk(attacker, "endless-quiver") is true:
+			give 3 arrow to attacker
+		if damage > 3.40:
+			if player_use_perk(attacker, "vampire") is true:
+				heal the attacker by 1.5 hearts
+		
+	if attacker is player:
+		if attacker is not victim:	
+			wait 1 tick
+			loop 20 times:
+				set {_health.%loop-integer%.%victim%} to "&7❤"
+				loop-integer is greater than max health of victim
+				set {_health.%loop-integer%.%victim%} to ""
+			loop rounded health of victim times:
+				set {_health.%loop-integer%.%victim%} to "&4❤"
+			set action bar of attacker to coloured "%{_health.1.%victim%}%%{_health.2.%victim%}%%{_health.3.%victim%}%%{_health.4.%victim%}%%{_health.5.%victim%}%%{_health.6.%victim%}%%{_health.7.%victim%}%%{_health.8.%victim%}%%{_health.9.%victim%}%%{_health.10.%victim%}%%{_health.11.%victim%}%%{_health.12.%victim%}%%{_health.13.%victim%}%%{_health.14.%victim%}%%{_health.15.%victim%}%%{_health.16.%victim%}%%{_health.17.%victim%}%%{_health.18.%victim%}%%{_health.19.%victim%}%%{_health.20.%victim%}%"
+			set {_sec.%uuid of victim%} to 10
+			set {_sec.%uuid of attacker%} to 10
+			if {pit.%uuid of victim%.status} is "&aIdling":
+				set {pit.%uuid of victim%.status} to "&cFighting"
+				pit_scoreboard(victim)
+				while {pit.%uuid of victim%.status} is "&cFighting":
+					remove 1 from {_sec.%uuid of victim%}
+					wait 1 seconds
+					if {_sec.%uuid of victim%} is 0:
+						set {pit.%uuid of victim%.status} to "&aIdling"
+						pit_scoreboard(victim)
+			if {pit.%uuid of attacker%.status} is "&aIdling":
+				set {pit.%uuid of attacker%.status} to "&cFighting"
+				pit_scoreboard(attacker)
+				while {pit.%uuid of attacker%.status} is "&cFighting":
+					remove 1 from {_sec.%uuid of attacker%}
+					wait 1 seconds
+					if {_sec.%uuid of attacker%} is 0:
+						set {pit.%uuid of attacker%.status} to "&aIdling"
+						pit_scoreboard(attacker)
+			set {_dmg} to damage
+			add rounded {_dmg} to {pit.%uuid of victim%.damage::%uuid of attacker%} 
+			if {pit.%uuid of victim%.damage::%uuid of attacker%}  > 10:
+				set metadata value "ASSIST" of victim to attacker
+				delete {pit.%uuid of victim%.damage::%uuid of attacker%} 
+				while {_sec.assist.%uuid of victim%} > 1:
+					remove 1 from {_sec.assist.%uuid of victim%}
+					wait 1 seconds
+					{_sec.assist.%uuid of victim%} = 1:
+						delete metadata value "ASSIST" of victim
+on death of player:
+	if player_has_perk(attacker, "dirty") is true:
+		apply resistance 2 to {_p} for 4 seconds
+	play sound {@kill-sound} to attacker with volume 100 and pitch 100
+	set action bar of attacker to coloured "&7&l%victim% &a&lKILL"
+	pit_give_golden_apple(attacker)
+	drop_armor(attacker, victim, 30)	
+	#stats
+	add 1 to {pit.%uuid of attacker%.kills}
+	add 1 to {pit.%uuid of victim%.deaths}
+	if {pit.%uuid of victim%.max-streak} < {pit.%uuid of victim%.streak}:
+		set {pit.%uuid of victim%.max-streak} to {pit.%uuid of victim%.streak}
+	#
+	set {_attackerName} to {@name-format}
+	replace all "{prestige}" with pit_get_prestige_color(attacker) in {_attackerName}
+	replace all "{color}" with pit_get_color(attacker) in {_attackerName}
+	replace all "{level}" with "%{pit.%uuid of attacker%.level}%" in {_attackerName}
+	replace all "{prefix}" with attacker's prefix in {_attackerName}
+	replace all "{player}" with "%attacker%" in {_attackerName}
+	#
+	set {_victimName} to {@name-format}
+	replace all "{prestige}" with pit_get_prestige_color(victim) in {_victimName}
+	replace all "{color}" with pit_get_color(victim) in {_victimName}
+	replace all "{level}" with "%{pit.%uuid of victim%.level}%" in {_victimName}
+	replace all "{prefix}" with victim's prefix in {_victimName}
+	replace all "{player}" with "%victim%" in {_victimName}
+	#
+	set {_attackerGold} to 0
+	add {@kill-gold} to {_attackerGold}
+	set {_uuid} to uuid of attacker
+	if {passive-upgrades.%{_uuid}%.gold-boost} > 0:
+		set {_lvl} to {passive-upgrades.%{_uuid}%.gold-boost}
+		set {_boost} to 0
+		if {_lvl} is 1:
+			set {_boost} to rounded {_attackerGold} / 10
+		else:
+			if {_lvl} is 2:
+				set {_boost} to rounded 20 * {_attackerGold} / 100
+			else:
+				if {_lvl} is 3:
+					set {_boost} to rounded 30 * {_attackerGold} / 100
+				else:
+					if {_lvl} is 4:
+						set {_boost} to rounded 40 * {_attackerGold} /100
+					else:
+						set {_boost} to rounded {_attackerGold} / 2
+		add {_boost} to {_attackerGold}
+	#
+	if {pit.%uuid of victim%.streak} >= 5:
+		set {_attackerBounty} to 0
+		add {pit.%uuid of victim%.streak}*{@bounty-multiplicator} to {_attackerBounty}
+		if attacker is online:
+			broadcast "&6&lBOUNTY CLAIMED! %{_attackerName}% &7killed %{_victimName}% &7for &6&l%{_attackerBounty}%g"
+		set {_uuid} to uuid of attacker
+		if {passive-upgrades.%{_uuid}%.gold-boost} > 0:
+			set {_lvl} to {passive-upgrades.%{_uuid}%.gold-boost}
+			set {_boost} to 0
+			if {_lvl} is 1:
+				set {_boost} to rounded {_victimBounty} / 10
+			else:
+				if {_lvl} is 2:
+					set {_boost} to rounded 20 * {_victimBounty} / 100
+				else:
+					if {_lvl} is 3:
+						set {_boost} to rounded 30 * {_victimBounty} / 100
+					else:
+						if {_lvl} is 4:
+							set {_boost} to rounded 40 * {_victimBounty} /100
+						else:
+							set {_boost} to rounded {_victimBounty} / 2
+			add {_boost} to {_attackerBounty}
+		add {_attackerBounty} to {_attackerGold}
+	add {_attackerGold} to {pit.%uuid of attacker%.gold}
+	#	
+	set {_attackerXP} to 0
+	set {_attackerXP} to {@kill-xp}
+	if {passive-upgrades.%{_uuid}%.xp-boost} > 0:
+		set {_lvl} to {passive-upgrades.%{_uuid}%.gold-boost}
+		set {_boost} to 0
+		if {_lvl} is 1:
+			set {_boost} to rounded {_attackerXP} / 10
+		else:
+			if {_lvl} is 2:
+				set {_boost} to rounded 20 * {_attackerXP} / 100
+			else:
+				if {_lvl} is 3:
+					set {_boost} to rounded 30 * {_attackerXP} / 100
+				else:
+					if {_lvl} is 4:
+						set {_boost} to rounded 40 * {_attackerXP} /100
+					else:
+						set {_boost} to rounded {_attackerXP} / 2
+		add {_boost} to {_attackerXP}
+	remove {_attackerXP} from {pit.%uuid of attacker%.xp-need}
+	#
+	add 1 to {pit.%uuid of attacker%.streak}
+	if attacker is online:
+		if {pit.%uuid of attacker%.streak} mod 5 = 0:
+			broadcast "&c&lSTREAK! &7of &c%{pit.%uuid of attacker%.streak}% &7Kills by %{_attackerName}%"
+	if {pit.%uuid of attacker%.streak} >= {@minStreakToBeBountied}:
+		set {_bounty} to {pit.%uuid of attacker%.streak}*{@bounty-multiplicator}
+		pit_bounty_tag(attacker, {_bounty})
+	if {pit.%uuid of attacker%.level} <= 120:
+		pit_check_level(attacker)
+	#
+	set {_messageKill} to "&a&lKill! &7on %{_victimName}% &b+{kill-xp}xp &6+{kill-gold}g"
+	replace all "{kill-xp}" with "%{_attackerXP}%" in {_messageKill}
+	replace all "{kill-gold}" with "%{_attackerGold}%" in {_messageKill}
+	send "%{_messageKill}%" to attacker
+	#
+	set death message to ""
+	clear drops
+	if metadata value "ASSIST" of victim is set:
+		set {_G} to metadata value "ASSIST" of victim
+		if {_G} is not attacker:
+			set {_uuid} to uuid of {_G}
+			set {_x1} to "&a&lASSIST! &7on %{_victimName}% &b+{assist-xp}xp &6+{assist-gold}g"
+			add 1 to {pit.%{_uuid}%.assists}
+			set {_attackerGold} to 0
+			add {@assist-gold} to {_attackerGold}
+			set {_uuid} to uuid of attacker
+			if {passive-upgrades.%{_uuid}%.gold-boost} > 0:
+				set {_lvl} to {passive-upgrades.%{_uuid}%.gold-boost}
+				set {_boost} to 0
+				if {_lvl} is 1:
+					set {_boost} to rounded {_attackerGold} / 10
+				else:
+					if {_lvl} is 2:
+						set {_boost} to rounded 20 * {_attackerGold} / 100
+					else:
+						if {_lvl} is 3:
+							set {_boost} to rounded 30 * {_attackerGold} / 100
+						else:
+							if {_lvl} is 4:
+								set {_boost} to rounded 40 * {_attackerGold} /100
+							else:
+								set {_boost} to rounded {_attackerGold} / 2
+				add {_boost} to {_attackerGold}
+			add {_attackerGold} to {pit.%{_uuid}%.gold}
+			#
+			set {_attackerXP} to 0
+			set {_attackerXP} to {@assist-xp}
+			if {passive-upgrades.%{_uuid}%.xp-boost} > 0:
+				set {_lvl} to {passive-upgrades.%{_uuid}%.gold-boost}
+				set {_boost} to 0
+				if {_lvl} is 1:
+					set {_boost} to rounded {_attackerXP} / 10
+				else:
+					if {_lvl} is 2:
+						set {_boost} to rounded 20 * {_attackerXP} / 100
+					else:
+						if {_lvl} is 3:
+							set {_boost} to rounded 30 * {_attackerXP} / 100
+						else:
+							if {_lvl} is 4:
+								set {_boost} to rounded 40 * {_attackerXP} /100
+							else:
+								set {_boost} to rounded {_attackerXP} / 2
+				add {_boost} to {_attackerXP}
+			remove {_attackerXP} from {pit.%{_uuid}%.xp-need}
+			replace all "{assist-xp}" with "%{_attackerXP}%" in {_x1}
+			replace all "{assist-gold}" with "%{_attackerGold}%" in {_x1}
+			send "%{_x1}%" to {_G}
+			pit_scoreboard({_G})
+			delete metadata value "ASSIST" of victim
+	#
+	send victim title "&c&lYOU DIED!" for 0.5 seconds
+	if attacker is online:
+		send "&c&lDEATH! &7by %{_attackerName}%" to victim
+	set {pit.%uuid of victim%.status} to "&aIdling"
+	make console execute command "nte player %victim% clear"
+	pit_nametag(victim)
+	wait 0.6 seconds
+	pit_equip(victim)
+	#force victim to respawn
+	#
+	set {_victimBounty} to 0
+	add {pit.%uuid of victim%.streak} to {_victimBounty}
+	if player_use_perk(victim, "streaker") is true:
+		if {pit.%uuid of victim%.streak} > 0:
+			set {_streakerXP} to {pit.%uuid of victim%.streak} * 3
+			remove {_streakerXP} from {pit.%uuid of victim%.xp-need}
+			send "&b&l+%{_streakerXP}%xp" to victim
+	set {pit.%uuid of victim%.streak} to 0
+	set {_victimBounty} to {_victimBounty}*{@bounty-multiplicator}
+	set {_victimBounty} to {_victimBounty} / 2
+	set {_uuid} to uuid of victim
+	if {passive-upgrades.%{_uuid}%.gold-boost} > 0:
+		set {_lvl} to {passive-upgrades.%{_uuid}%.gold-boost}
+		set {_boost} to 0
+		if {_lvl} is 1:
+			set {_boost} to rounded {_victimBounty} / 10
+		else:
+			if {_lvl} is 2:
+				set {_boost} to rounded 20 * {_victimBounty} / 100
+			else:
+				if {_lvl} is 3:
+					set {_boost} to rounded 30 * {_victimBounty} / 100
+				else:
+					if {_lvl} is 4:
+						set {_boost} to rounded 40 * {_victimBounty} /100
+					else:
+						set {_boost} to rounded {_victimBounty} / 2
+		add {_boost} to {_victimBounty}
+	add {_victimBounty} to {pit.%uuid of victim%.gold}
+	pit_scoreboard(victim)
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#              FUNCTIONS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#SHOP FUNCTIONS
+function pit_shop(p: player):	
+	open virtual chest inventory with size 3 named "&4Non-Permanent Items" to {_p}
+	wait 1 ticks
+	create_slot({_p}, 10, "diamond_sword", "&bDiamond Sword", 1, 100, false, "||&8&l-&aDoes 20 percent more damage ||&a  to players with bounties")
+	create_slot({_p}, 11, "arrow", "&7Arrow", 32, 20, false, "none")
+	create_slot({_p}, 12, "obsidian", "&5Obsidian", 8, 40, false, "||&8&l-&aDissapear 2 minutes after being placed")
+	create_slot({_p}, 15, "diamond_boots", "&bDiamond Boots", 1, 150, true, "||&8&l-&aAuto equip on buy")
+	create_slot({_p}, 16, "diamond_chestplate", "&bDiamond Chestplate", 1, 250, true, "||&8&l-&aAuto equip on buy")
+	set {_item} to "gray stained glass pane"
+	create_simple_slot({_p}, 0, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 1, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 2, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 3, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 4, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 5, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 6, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 7, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 8, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 18, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 19, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 20, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 21, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 22, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 23, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 24, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 25, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 26, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 9, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 13, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 14, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 17, {_item}, "&e&lTHE PIT")
+
+function create_slot(p: player, slotNumber: integer, item: text, itemName: text, cantitate: integer, gold: integer, equip: boolean, optionalLore: text):
+	set {_lore} to "&8&l-&aLost on death||&8&l-&aCost: &6{gold}g{optionalLore}"
+	replace all "{gold}" with "%{_gold}%" in {_lore}
+	if {_optionalLore} is "none":
+		replace all "{optionalLore}" with "" in {_lore}
+	else:
+		replace all "{optionalLore}" with "%{_optionalLore}%" in {_lore}
+	make a gui slot {_slotNumber} of {_p} with {_cantitate} of {_item} parsed as item named {_itemName} with lore {_lore} to run:
+		set {_item} to "%{_item}%"
+		if gold({_p}, "has", {_gold}) is true:
+			gold({_p}, "remove", {_gold})
+			pit_scoreboard({_p})
+			if {_equip} is true:
+				if "%{_item}%" contain "chestplate":
+					set {_p}'s chestplate to diamond_chestplate
+				else:
+					set {_p}'s boots to diamond_boots
+			else:
+				make console execute command "give %{_p}% %{_item}% %{_cantitate}%"
+			set {_x} to {@message-item-purchase}
+			replace all "{item}" with "%{_item}%" in {_x}
+			replace all "{gold}" with "%{_gold}%" in {_x}
+			send "%{_x}%" to {_p}
+		else:
+			set {_x} to {@message-not-enough-gold}
+			replace all "{item}" with "%{_item}%" in {_x}
+			send "%{_x}%" to {_p}
+#END OF SHOP FUNCTIONS
+function delete_passive_upgrades_when_prestige(p: player):
+	set {_uuid} to uuid of {_p}
+	clear {passive-upgrades.%{_uuid}%.xp-boost}
+	clear {passive-upgrades.%{_uuid}%.gold-boost}
+	clear {passive-upgrades.%{_uuid}%.melee-damage}
+	clear {passive-upgrades.%{_uuid}%.bow-damage}
+	clear {passive-upgrades.%{_uuid}%.damage-reduction}
+	clear {passive-upgrades.%{_uuid}%.build-battler}
+	clear {perks.%{_uuid}%.slot1}
+	clear {perks.%{_uuid}%.slot2}
+	clear {perks.%{_uuid}%.slot3}
+	clear {perks.%{_uuid}%.slot4}
+	clear {perks.%{_uuid}%.golden-heads}
+	clear {perks.%{_uuid}%.fishing-rod}
+	clear {perks.%{_uuid}%.lava-bucket}
+	clear {perks.%{_uuid}%.endless-quiver}
+	clear {perks.%{_uuid}%.safety-first}
+	clear {perks.%{_uuid}%.trickle-down}
+	clear {perks.%{_uuid}%.lucky-diamond}
+	clear {perks.%{_uuid}%.streaker}
+	clear {perks.%{_uuid}%.vampire}
+#PERK FUNCTIONS
+function pit_perk_shop(p: player):
+	open virtual chest inventory with size 5 named "&2Permanent Upgrades" to {_p}
+	set {_loreK} to "&8&l-&a{custom-lore}||&8&l-&aUpgrade to Tier {tierLevel} ||&8&l-&aCost: &6{gold}g"
+	set {_lore} to {_loreK}
+	replace all "{custom-lore}" with "Earn +10 percent XP from all sources" in {_lore}
+	create_passive_slot({_p}, 10, "xp-boost", "exp_bottle", "&bXP Boost", {_lore}, 500, 1000, 2500, 10000, 25000)
+	set {_lore} to {_loreK}
+	replace all "{custom-lore}" with "Earn +10 percent gold from kills||&a  and coin pickups." in {_lore}
+	create_passive_slot({_p}, 11, "gold-boost", "gold_ingot", "&6Gold Boost", {_lore}, 1000, 2500, 10000, 25000, 40000)
+	set {_lore} to {_loreK}
+	replace all "{custom-lore}" with "Deal +1 percent melee damage" in {_lore}
+	create_passive_slot({_p}, 19, "melee-damage", "iron_sword", "&fMelee Damage", {_lore}, 450, 1050, 1500, 2250, 3000)
+	set {_lore} to {_loreK}
+	replace all "{custom-lore}" with "Deal +3 percent bow damage" in {_lore}
+	create_passive_slot({_p}, 20, "bow-damage", "bow", "&eBow Damage", {_lore}, 450, 1050, 1500, 2250, 3000)
+	set {_lore} to {_loreK}
+	replace all "{custom-lore}" with "Recieve -1 percent damage" in {_lore}
+	create_passive_slot({_p}, 28, "damage-reduction", "iron_chestplate", "&cDamage Reduction", {_lore}, 450, 1050, 1500, 2250, 3000)
+	set {_lore} to {_loreK}
+	replace all "{custom-lore}" with "Your blocks stay +60 percent longer" in {_lore}
+	create_passive_slot({_p}, 29, "build-battler", "stone_bricks", "&2Build Battler", {_lore}, 750, 1750, 2750, 3750, 5000)
+	#
+	create_perk_slot({_p}, 14, "golden-heads", "gold block", "&6Golden Heads", "Golden apples you earn ||  &aturn into Golden Heads", 500, 10)
+	create_perk_slot({_p}, 15, "fishing-rod", "fishing rod", "&3Fishing Rod", "Spawn with a fishing rod", 1000, 10)
+	create_perk_slot({_p}, 23, "lava-bucket", "lava bucket", "&cLava Bucket", "Spawn with a lava bucket", 1000, 10)
+	create_perk_slot({_p}, 16, "endless-quiver", "arrow", "&3Endless Quiver", "Get 3 arrows on arrow hit", 2000, 20)
+	create_perk_slot({_p}, 24, "safety-first", "chain_helmet", "&7Safety First", "Spawn with a helmet", 3000, 30)
+	create_perk_slot({_p}, 32, "trickle-down", "7 gold_ingot", "&e&lTrickle Down", "Picked up gold ingots rewards||&a  7x more gold", 1000, 40)
+	create_perk_slot({_p}, 25, "lucky-diamond", "diamond", "&bLucky Diamond", "30 percent chance to upgrade ||&a  dropped armor pieces ||&a  from kills to diamond", 4000, 40)
+	create_perk_slot({_p}, 33, "streaker", "3 exp_bottle", "&eStreaker", "Triple streak kill XP bonus", 8000, 50)
+	create_perk_slot({_p}, 34, "vampire", "redstone_dust", "&4Vampire", "Don't earn golden apples||&8&l-&aEarn &40.5❤ &aon melee hit||&8&l-&aEarn &41.5❤ &aon fully charged arrow hit||&8&l-&aEarn regeneration II 5s on kill", 4000, 60)
+	#
+	set {_itemSlot} to "gray stained glass pane"
+	set {_itemSlotName} to "&e&lTHE PIT"
+	create_simple_slot({_p}, 0, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 1, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 2, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 3, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 4, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 9, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 12, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 13, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 17, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 18, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 21, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 22, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 26, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 27, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 30, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 31, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 35, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 36, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 37, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 38, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 39, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 40, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 41, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 42, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 43, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 44, {_itemSlot}, {_itemSlotName})
+	#
+	set {_item1} to "yellow stained glass pane"
+	set {_item2} to "red stained glass pane"
+	create_select_perkSlot_slot({_p}, 5, "slot1", {_item1}, {_item2}, "&ePerk Slot 1", 0)
+	create_select_perkSlot_slot({_p}, 6, "slot2", {_item1}, {_item2}, "&ePerk Slot 2", 0)
+	create_select_perkSlot_slot({_p}, 7, "slot3", {_item1}, {_item2}, "&ePerk Slot 3", 0)
+	create_select_perkSlot_slot({_p}, 8, "slot4", {_item1}, {_item2}, "&ePerk Slot 4", 4)
+	
+function create_select_perkSlot_slot(p: player, slot: integer, slotName: text, item1: text, item2: text, itemName: text, prestigeRequired: integer):
+	set {_lore} to "&8&l-&aSelect a perk!||{cases}"
+	set {_uuid} to uuid of {_p}
+	if {pit.%{_uuid}%.prestige} < {_prestigeRequired}:
+		replace all "{cases}" with "&cRequires prestige &4%{_prestigeRequired}% &cto unlock!" in {_lore}
+		make a gui slot {_slot} of {_p} with {_item2} parsed as item with name {_itemName} with lore {_lore}
+	else:
+		replace all "{cases}" with "" in {_lore}
+		if {perks.%{_uuid}%.%{_slotName}%} is not set:
+			make a gui slot {_slot} of {_p} with {_item1} parsed as item with name {_itemName} with lore {_lore} to run:
+				open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+		else:
+			if {perks.%{_uuid}%.%{_slotName}%} is "none":
+				make a gui slot {_slot} of {_p} with {_item1} parsed as item with name {_itemName} with lore {_lore} to run:
+					open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+			else:
+				set {_perk} to {perks.%{_uuid}%.%{_slotName}%}
+				if {_perk} is "golden-heads":
+					make a gui slot {_slot} of {_p} with gold block named "&6Golden Heads" with lore "&8&l-&aGolden apples you earn ||  &aturn into Golden Heads" to run:
+						open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+				else:
+					if {_perk} is "fishing-rod":
+						make a gui slot {_slot} of {_p} with fishing rod named "&3Fishing Rod" with lore "&8&l-&aSpawn with a fishing rod" to run:
+							open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+					else:
+						if {_perk} is "lava-bucket":
+							make a gui slot {_slot} of {_p} with lava bucket named "&cLava Bucket" with lore "&8&l-&aSpawn with a lava bucket" to run:
+								open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+						else:
+							if {_perk} is "endless-quiver":
+								make a gui slot {_slot} of {_p} with arrow named "&3Endless Quiver" with lore "&8&l-&aGet 3 arrows on arrow hit" to run:
+									open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+							else:
+								if {_perk} is "safety-first":
+									make a gui slot {_slot} of {_p} with chain_helmet named "&7Safety First" with lore "&8&l-&aSpawn with a helmet" to run:
+										open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+								else:
+									if {_perk} is "trickle-down":
+										make a gui slot {_slot} of {_p} with gold_ingot named "&e&lTrickle Down" with lore "&8&l-&aPicked up gold ingots rewards||&a  7x more gold" to run:
+											open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+									else:
+										if {_perk} is "lucky-diamond":
+											make a gui slot {_slot} of {_p} with diamond named "&bLucky Diamond" with lore "&8&l-&a30 percent chance to upgrade ||&a  dropped armor pieces ||&a  from kills to diamond" to run:
+												open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+										else:
+											if {_perk} is "streaker":
+												make a gui slot {_slot} of {_p} with 3 exp_bottle named "&eStreaker" with lore "&8&l-&aTriple streak kill XP bonus" to run:
+													open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+											else:
+												if {_perk} is "vampire":
+													make a gui slot {_slot} of {_p} with redstone_dust named "&4Vampire" with lore "&8&l-&aDon't earn golden apples||&8&l-&aEarn &40.5❤ &aon melee hit||&8&l-&aEarn &41.5❤ &aon fully charged arrow hit||&8&l-&aEarn regeneration II 5s on kill" to run:
+														open_another_chest_inventory_to_choose_a_perk({_p}, {_slotName})
+							
+						
+function open_another_chest_inventory_to_choose_a_perk(p: player, slotName: text):
+	open virtual chest inventory with size 3 named "&3Choose a perk!" to {_p}
+	set {_uuid} to uuid of {_p}
+	if player_has_perk({_p}, "golden-heads") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 9, "golden-heads", "gold block", "&6Golden Heads", "Golden apples you earn ||  &aturn into Golden Heads", {_slotName})	
+	else:
+		create_simple_slot({_p}, 9, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "fishing-rod") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 10, "fishing-rod", "fishing rod", "&3Fishing Rod", "Spawn with a fishing rod", {_slotName})
+	else:
+		create_simple_slot({_p}, 10, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "lava-bucket") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 11, "lava-bucket", "lava bucket", "&cLava Bucket", "Spawn with a lava bucket", {_slotName})
+	else:
+		create_simple_slot({_p}, 11, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "endless-quiver") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 12, "endless-quiver", "arrow", "&3Endless Quiver", "Get 3 arrows on arrow hit", {_slotName})
+	else:
+		create_simple_slot({_p}, 12, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "safety-first") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 13, "safety-first", "chain_helmet", "&7Safety First", "Spawn with a helmet", {_slotName})
+	else:
+		create_simple_slot({_p}, 13, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "trickle-down") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 14, "trickle-down", "7 gold_ingot", "&e&lTrickle Down", "Picked up gold ingots rewards||&a  7x more gold", {_slotName})
+	else:
+		create_simple_slot({_p}, 14, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "lucky-diamond") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 15, "lucky-diamond", "diamond", "&bLucky Diamond", "30 percent chance to upgrade ||&a  dropped armor pieces ||&a  from kills to diamond", {_slotName})
+	else:
+		create_simple_slot({_p}, 15, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "streaker") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 16, "streaker", "3 exp_bottle", "&eStreaker", "Triple streak kill XP bonus", {_slotName})
+	else:
+		create_simple_slot({_p}, 16, "bedrock", "&4Locked!")
+	
+	if player_has_perk({_p}, "vampire") is true:
+		create_slot_for_OACITCAP_to_set_perk_slot({_p}, 17, "vampire", "redstone_dust", "&4Vampire", "Don't earn golden apples||&8&l-&aEarn &40.5❤ &aon melee hit||&8&l-&aEarn &41.5❤ &aon fully charged arrow hit||&8&l-&aEarn regeneration II 5s on kill", {_slotName})
+	else:
+		create_simple_slot({_p}, 17, "bedrock", "&4Locked!")
+	
+	clear {_currentSlot}
+	set {_itemSlot} to "yellow stained glass pane"
+	set {_itemSlotName} to "&e&lTHE PIT"
+	create_simple_slot({_p}, 0, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 1, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 2, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 3, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 4, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 5, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 6, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 7, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 8, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 18, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 19, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 20, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 21, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 22, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 23, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 24, {_itemSlot}, {_itemSlotName})
+	create_simple_slot({_p}, 25, {_itemSlot}, {_itemSlotName})
+	
+	
+	create_slot_for_OACITCAP_to_set_perk_slot({_p}, 26, "none", "barrier", "&4None", "Clear this perk slot", {_slotName})
+	
+function create_slot_for_OACITCAP_to_set_perk_slot(p: player, slot: integer, perkName: text, item: text, itemName: text, lore: text, slotName: text):
+	set {_lorek} to "&8&l-&a{custom-lore}"
+	replace all "{custom-lore}" with "%{_lore}%" in {_lorek}
+	set {_uuid} to uuid of {_p}
+	make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek} to close then run function pit_perk_shop({_p}):
+		set {perks.%{_uuid}%.%{_slotName}%} to {_perkName}
+		pit_perk_shop({_p})
+				
+function create_simple_slot(p: player, slot: integer, item: text, itemName: text):
+	make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName}
+
+function create_perk_slot(p:player, slot: integer, perkName: text, item: text, itemName: text, lore: text, gold: integer, levelUnlock: integer):
+	set {_lorek} to "&8&l-&a{custom-lore}||{cases}"
+	replace all "{custom-lore}" with "%{_lore}%" in {_lorek}
+	set {_uuid} to uuid of {_p}
+	if {pit.%{_uuid}%.level} < {_levelUnlock}:
+		replace all "{cases}" with "&8&l-&cRequiers level %{_levelUnlock}%&c to unlock!" in {_lorek}
+		make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek}
+	else:
+		if player_has_perk({_p},{_perkName}) is true:
+			if player_use_perk({_p},{_perkName}) is true:
+				replace all "{cases}" with "&8&l-&3Equipped" in {_lorek}
+			else:
+				replace all "{cases}" with "&8&l-&bUnequipped" in {_lorek}
+			make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek}
+		else:
+			set {_x} to "&8&l-&aCost: &6{gold}g"
+			replace all "{gold}" with "%{_gold}%" in {_x}
+			replace all "{cases}" with "%{_x}%" in {_lorek}
+			make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek} to close then run function pit_perk_shop({_p}):
+				if gold({_p}, "has", {_gold}) is true:
+					gold({_p}, "remove", {_gold})
+					set {perks.%{_uuid}%.%{_perkName}%} to true
+					pit_perk_shop({_p})
+					pit_scoreboard({_p})
+					send "{@messagePerkBought}" to player
+				else:
+					send "{@messagePerkNotEnoughGold}" to player
+	
+function create_passive_slot(p: player, slot: integer, variableName: text, item: text, itemName: text, lore: text, tier1: integer, tier2: integer, tier3: integer, tier4: integer, tier5: integer):
+	set {_uuid} to uuid of {_p}
+	set {_ok} to 0
+	add {passive-upgrades.%{_uuid}%.%{_variableName}%} to {_ok}
+	if {_ok} is 0:
+		set {_okGold} to {_tier1}
+	else:
+		if {_ok} is 1:
+			set {_okGold} to {_tier2}
+		else:
+			if {_ok} is 2:
+				set {_okGold} to {_tier3}
+			else:
+				if {_ok} is 3:
+					set {_okGold} to {_tier4}
+				else:
+					if {_ok} is 4:
+						set {_okGold} to {_tier5}
+					else:
+						set {_okGold} to 999999999 
+	one_tier({_p}, {_slot}, {_variableName}, {_item}, {_itemName}, {_lore}, {_ok}, {_okGold})
+			
+function one_tier(p: player, slot: integer, variableName: text, item: text, itemName: text, lore: text, tier: integer, tierGold: integer):
+	if {_tierGold} is 999999999:
+		make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore "&8&l-&4MAX LEVEL"
+	else:
+		add 1 to {_tier}
+		replace all "{tierLevel}" with "%{_tier}%" in {_lore}
+		replace all "{gold}" with "%{_tierGold}%" in {_lore}
+		set {_uuid} to uuid of {_p}
+		make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lore} to close then run function pit_perk_shop({_p}):
+			if gold({_p}, "has", {_tierGold}) is true:
+				gold({_p}, "remove", {_tierGold})
+				set {passive-upgrades.%{_uuid}%.%{_variableName}%} to {passive-upgrades.%{_uuid}%.%{_variableName}%} + 1
+				send "{@messageUpgradePurchased}" to {_p}
+				pit_scoreboard({_p})
+				pit_perk_shop({_p})
+			else:
+				send "{@messageNotEnoughGoldToUpgrade}" to {_p}
+#END OF PERK FUNCTIONS	
+#PERK FUNCTIONS 2
+function player_has_perk(p: player, perkName: text) :: boolean:
+	set {_uuid} to uuid of {_p}
+	if {perks.%{_uuid}%.%{_perkName}%} is true:
+		return true
+	else:
+		return false
+function player_use_perk(p: player, perkName: text) :: boolean:
+	set {_uuid} to uuid of {_p}
+	if {perks.%{_uuid}%.slot1} is {_perkName}:
+		return true
+	if {perks.%{_uuid}%.slot2} is {_perkName}:
+		return true
+	if {perks.%{_uuid}%.slot3} is {_perkName}:
+		return true
+	if {perks.%{_uuid}%.slot4} is {_perkName}:
+		return true
+function pit_give_golden_apple(p: player):
+	set {_uuid} to uuid of {_p}
+	if player_has_perk({_p}, "rambo") is false:
+		if player_use_perk({_p}, "vampire") is true:
+			apply regeneration 2 to {_p} for 5 seconds
+		else:
+			if player_use_perk({_p}, "golden-heads") is true:
+				give skull of "StackedGold" parsed as offline player named "&6&lGolden Head" to {_p}
+			else:
+				give 1 golden_apple to {_p}
+	else:
+		make console execute command "heal %{_p}%"
+		if player_has_perk({_p}, "olympus") is true:
+			give {_p} 1 water bottle named "&eOlympus potion"
+#END OF PERK FUNCTIONS 2
+#->JOIN FUNCTIONS
+function pit_join(p: player):
+	set {_uuid} to uuid of {_p}
+	teleport {_p} to {pit.spawn}
+	if {pit.%{_uuid}%.level} is not set:
+		set {pit.%{_uuid}%.level} to 1
+	if {pit.%{_uuid}%.prestige} is not set:
+		set {pit.%{_uuid}%.prestige} to 0	
+	if {pit.%{_uuid}%.xp-need} is not set:
+		set {pit.%{_uuid}%.xp-need} to 100	
+	if {pit.%{_uuid}%.gold} is not set:
+		set {pit.%{_uuid}%.gold} to 0	
+	if {pit.%{_uuid}%.kills} is not set:
+		set {pit.%{_uuid}%.kills} to 0
+	if {pit.%{_uuid}%.assists} is not set:
+		set {pit.%{_uuid}%.assists} to 0
+	if {pit.%{_uuid}%.deaths} is not set:
+		set {pit.%{_uuid}%.deaths} to 0
+	if {pit.%{_uuid}%.max-streak} is not set:
+		set {pit.%{_uuid}%.max-streak} to 0
+	if {pit.%{_uuid}%.renown} is not set:
+		set {pit.%{_uuid}%.renown} to 0
+	set {pit.%{_uuid}%.streak} to 0
+	set {pit.%{_uuid}%.status} to "&aIdling"
+	pit_clear({_p})
+	pit_equip({_p})
+	pit_nametag({_p})
+	pit_scoreboard({_p})
+	
+function pit_clear(p: player):	
+	clear {_p}'s inventory
+	clear {_p}'s level
+	remove all effects from {_p}
+	
+function armor_equip(p: player, x: integer):
+	if player_use_perk({_p}, "safety-first"):
+		set {_p}'s helmet to unbreakable chain_helmet or unbreakable iron_helmet
+	set {_p}'s chestplate to {START-KIT::%{_x}%::1}
+	set {_p}'s leggings to {START-KIT::%{_x}%::2}
+	set {_p}'s boots to {START-KIT::%{_x}%::3}
+	
+function pit_equip(p: player):
+	if player_use_perk({_p}, "fishing-rod") is true:
+		set slot 7 of {_p} to unbreakable fishing_rod with name "&3Fishing Rod"
+	if player_use_perk({_p}, "lava-bucket") is true:
+		set slot 6 of {_p} to lava_bucket named "&cLava Bucket"
+	set {_uuid} to uuid of {_p}
+	if player_has_perk({_p}, "barbarian") is true:
+		set slot 0 of {_p} to unbreakable iron_axe
+	else:
+		set slot 0 of {_p} to unbreakable iron_sword
+	set slot 1 of {_p} to unbreakable bow
+	set slot 8 of {_p} to 30 arrows
+	set {_rand} to random integer between 1 and 3
+	armor_equip({_p}, {_rand})
+#<- END OF JOIN FUNCTIONS	
+#->SCOREBOARD FUNCTIONS
+function pit_scoreboard(p: player):
+	set {_uuid} to uuid of {_p}
+	set {_prestige} to {pit.%{_uuid}%.prestige}
+	if stylish scoreboard "Pit-%{_p}%" does not exist:
+		create new stylish scoreboard named "PIT-%{_p}%"
+		if {_prestige} is 0:
+			set {_lines} to 10
+		else:
+			set {_lines} to 11
+		loop {_lines} times:
+			create a new id based score "PIT-%{_p}%Slot%loop-number%" with text "&%loop-number%" slot loop-number for stylish scoreboard "PIT-%{_p}%"
+	set stylish scoreboard of {_p} to "PIT-%{_p}%"				
+	set title of stylish scoreboard "PIT-%{_p}%" to "&e&l The Atlantis PIT "
+	set {_x} to "{prestige_color}[{level_color}{level}{prestige_color}]"
+	replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_x}
+	replace all "{level_color}" with pit_get_color({_p}) in {_x}
+	replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_x}
+	if {_prestige} is 0:
+		set the text of id "PIT-%{_p}%Slot10" to "&7%now%"
+		set the text of id "PIT-%{_p}%Slot9" to "&e"
+	else:
+		set the text of id "PIT-%{_p}%Slot11" to "&7%now%"
+		set the text of id "PIT-%{_p}%Slot10" to " "
+		set {_prestige} to {pit.%{_uuid}%.prestige}
+		set the text of id "PIT-%{_p}%Slot9" to "&fPrestige: %{PRESTIGES::%{_prestige}%}%"
+	set the text of id "PIT-%{_p}%Slot8" to "&fLevel: %{_x}%"
+	set the text of id "PIT-%{_p}%Slot7" to "&fNeeded XP: &b%{pit.%{_uuid}%.xp-need}%"
+	set the text of id "PIT-%{_p}%Slot6" to "&d"
+	set the text of id "PIT-%{_p}%Slot5" to "&fStatus: %{pit.%{_uuid}%.status}%"
+	set the text of id "PIT-%{_p}%Slot4" to "&fGold: &6%{pit.%{_uuid}%.gold}%g"
+	set the text of id "PIT-%{_p}%Slot3" to "&fStreak: &a%{pit.%{_uuid}%.streak}%"
+	set the text of id "PIT-%{_p}%Slot2" to "&6"
+	set the text of id "PIT-%{_p}%Slot1" to "&emc.atlantis-nt.com"
+#<-END OF SCOREBOARD FUNCTIONS		
+#->NAMETAG FUNCTIONS
+function pit_nametag(p: player):
+	set {_nametag} to {@nametag-format}
+	replace all "{prestige_color}" with pit_get_prestige_color({_p}) in {_nametag}
+	replace all "{level_color}" with pit_get_color({_p}) in {_nametag}
+	set {_uuid} to uuid of {_p}
+	replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_nametag}
+	replace all "{prefix}" with {_p}'s prefix in {_nametag}
+	make console execute command "nte player %{_p}% prefix %{_nametag}%"
+function pit_bounty_tag(p: player, bounty: number):
+	set {_nametag} to {@bounty-nametag-format}
+	replace all "{gold}" with "%{_bounty}%" in {_nametag}
+	make console execute command "nte player %{_p}% suffix %{_nametag}%"
+#<-END OF NAMETAG FUNCTIONS
+#->COLOR FUNCTIONS
+function pit_get_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_level} to "%{pit.%{_uuid}%.level}%" parsed as integer
+	if {_level} <= 9:
+		return "&7"
+	if {_level} <=19:
+		return "&1"
+	if {_level} <=29:
+		return "&3"
+	if {_level} <=39:
+		return "&2"
+	if {_level} <=49:
+		return "&a"
+	if {_level} <=59:
+		return "&e"
+	if {_level} <=69:
+		return "&6&l"
+	if {_level} <=79:
+		return "&c&l"
+	if {_level} <=89:
+		return "&4&l"
+	if {_level} <=99:
+		return "&5&l"
+	if {_level} <=109:
+		return "&d&l"
+	if {_level} <=119:
+		return "&f&l"
+	if {_level} = 120:
+		return "&b&l"
+function pit_get_prestige_color(p: player) :: string:
+	set {_uuid} to uuid of {_p}
+	set {_prestige} to "%{pit.%{_uuid}%.prestige}%" parsed as integer
+	if {_prestige} = 0:
+		return "&7"
+	if {_prestige} <= 4:
+		return "&9"
+	if {_prestige} <= 9:
+		return "&e"
+	if {_prestige} <=14:
+		return "&6"
+	if {_prestige} <=19:
+		return "&c"
+	if {_prestige} <=24:
+		return "&5"
+	if {_prestige} = 30:
+		return "&4"
+	return "&d"
+#<- END OF COLOR FUNCTIONS
+
+function pit_check_level(p: player):	
+	set {_uuid} to uuid of {_p}
+	if {pit.%{_uuid}%.xp-need} <= 0:
+		if {pit.%{_uuid}%.level} = 120:
+			set {pit.%{_uuid}%.xp-need} to 0
+			pit_scoreboard({_p})
+			stop
+		else:
+			set {_old} to "{prestige}[{color}{level}{prestige}]"
+			replace all "{prestige}" with pit_get_prestige_color({_p}) in {_old}
+			replace all "{color}" with pit_get_color({_p}) in {_old}
+			replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_old}
+			add 1 to {pit.%{_uuid}%.level}
+			send "&b&lLevel Up!" to {_p}
+			set {_x} to "&b&lLEVEL UP!"
+			set {_y} to "{old} &8&l-> {new}"
+			replace all "{old}" with "%{_old}%" in {_y}	
+			set {_new} to "{prestige}[{color}{level}{prestige}]"
+			replace all "{prestige}" with pit_get_prestige_color({_p}) in {_new}
+			replace all "{color}" with pit_get_color({_p}) in {_new}
+			replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_new}
+			replace all "{new}" with "%{_new}%" in {_y}		
+			send {_p} title "%{_x}%" with subtitle "%{_y}%" for 3 seconds
+			play sound "ENTITY_ENDERDRAGON_SHOOT" to {_p} with volume 100 and pitch 100
+			set {_p}'s level to {pit.%{_uuid}%.level}
+			if {pit.%{_uuid}%.level} > 1:
+				set {pit.%{_uuid}%.xp-need} to 100*{pit.%{_uuid}%.level}
+			else:
+				add 100 to {pit.%{_uuid}%.xp-need}	
+			pit_nametag({_p})
+	pit_scoreboard({_p})
+function gold(p: player , action: text, x: integer) :: boolean:
+	set {_uuid} to uuid of {_p}
+	if {_action} is "has":
+		if {pit.%{_uuid}%.gold} >= {_x}:
+			return true
+		else:
+			return false
+	if {_action} is "remove":
+		remove {_x} from {pit.%{_uuid}%.gold}
+function drop_armor(attacker: player, victim: player, chance: integer):
+	if chance of {_chance}%:
+		set {_ok} to player_use_perk({_attacker}, "lucky-diamond")
+		if {_victim}'s helmet is unbreakable iron_helmet:
+			if {_ok} is true:
+				if chance of 30%:
+					drop diamond_helmet at {_attacker}'s location
+				else:
+					drop unbreakable iron_helmet at {_attacker}'s location
+			else:
+				drop unbreakable iron_helmet at {_attacker}'s location
+		else:
+			if {_victim}'s chestplate is unbreakable iron_chestplate:
+				if {_ok} is true:
+					if chance of 30%:
+						drop diamond_chestplate at {_attacker}'s location
+					else:
+						drop unbreakable iron_chestplate at {_attacker}'s location
+				else:
+					drop unbreakable iron_chestplate at {_attacker}'s location
+			else:
+				if {_victim}'s leggings is unbreakable iron_leggings:
+					if {_ok} is true:
+						if chance of 30%:
+							drop diamond_leggings at {_attacker}'s location
+						else:
+							drop unbreakable iron_leggings at {_attacker}'s location
+					else:
+						drop unbreakable iron_leggings at {_attacker}'s location
+				else:
+					if {_victim}'s boots is unbreakable iron_boots:
+						if {_ok} is true:
+							if chance of 30%:
+								drop diamond_boots at {_attacker}'s location
+							else:
+								drop unbreakable iron_boots at {_attacker}'s location
+						else:
+							drop unbreakable iron_boots at {_attacker}'s location
+function pit_stats(p: player):
+	open virtual chest inventory with size 3 named "&3&lSTATS" to {_p}
+	set {_item} to "gray stained glass pane"
+	create_simple_slot({_p}, 0, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 1, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 2, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 3, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 4, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 5, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 6, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 7, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 8, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 18, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 19, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 20, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 21, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 22, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 23, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 24, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 25, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 26, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 9, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 17, {_item}, "&e&lTHE PIT")
+	#
+	set {_x} to "&fLevel: {prestige}[{color}{level}{prestige}]"
+	replace all "{prestige}" with pit_get_prestige_color({_p}) in {_x}
+	replace all "{color}" with pit_get_color({_p}) in {_x}
+	set {_uuid} to uuid of {_p}
+	replace all "{level}" with "%{pit.%{_uuid}%.level}%" in {_x}
+	create_simple_slot({_p}, 14, "diamond", {_x})
+	
+	set {_x} to "&fKills: &a{kills}"
+	replace all "{kills}" with "%{pit.%{_uuid}%.kills}%" in {_x}
+	create_simple_slot({_p}, 10, "diamond_sword", {_x})
+	
+	set {_x} to "&fAssists: &a{assists}"
+	replace all "{assists}" with "%{pit.%{_uuid}%.assists}%" in {_x}
+	create_simple_slot({_p}, 11, "iron_sword", {_x})
+	
+	set {_x} to "&fMax Streak: &a{mstreak}"
+	replace all "{mstreak}" with "%{pit.%{_uuid}%.max-streak}%" in {_x}
+	create_simple_slot({_p}, 12, "gold_sword", {_x})
+	
+	set {_x} to "&fDeaths: &a{deaths}"
+	replace all "{deaths}" with "%{pit.%{_uuid}%.deaths}%" in {_x}
+	create_simple_slot({_p}, 13, "wooden_swords", {_x})
+	
+	set {_x} to "&fPrestige: {prestige}"
+	set {_y} to {pit.%{_uuid}%.prestige}
+	replace all "{prestige}" with "%{PRESTIGES::%{_y}%}%" in {_x}
+	create_simple_slot({_p}, 15, "gold block", {_x})
+	
+	set {_x} to "&fRenown: &6{renown}"
+	replace all "{renown}" with "%{pit.%{_uuid}%.renown}%" in {_x}
+	create_simple_slot({_p}, 16, "gold ingot", {_x})
+	
+function pit_pperk_shop(p: player):
+	open virtual chest inventory with size 3 named "&e&lRenown" to {_p}
+	set {_item} to "gray stained glass pane"
+	create_simple_slot({_p}, 0, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 1, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 2, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 3, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 4, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 5, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 6, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 7, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 8, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 18, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 19, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 20, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 21, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 22, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 23, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 24, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 25, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 26, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 10, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 9, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 16, {_item}, "&e&lTHE PIT")
+	create_simple_slot({_p}, 17, {_item}, "&e&lTHE PIT")
+	
+	create_pperk_slot({_p}, 11, "barbarian", "iron_axe", "&cBarbarian", "Replaces your sword with a stronger axe", 3000, 10, 30, 1)
+	create_pperk_slot({_p}, 12, "dirty", "podzol", "&6Dirty", "Gain Resistance II (4s) on kill", 8000, 15, 70, 2)
+	create_pperk_slot({_p}, 13, "rambo", "wooden_sword", "&4Rambo", "Don't earn golden apples||&8&l-&aRefill all health on kill", 6000, 15, 70, 3)
+	create_pperk_slot({_p}, 14, "olympus", "potion", "&eOlympus", "Golden apples are replaced with Olympus Potions||&8&l-&aSpeed I (24s)||&8&l-&aRegeneration III (10s)||&8&l-&aResistance II (4s)||&8&l-&a+40 XP when drank", 6000, 25, 70, 4)
+	create_pperk_slot({_p}, 15, "kung-fu-knowledge", "white wool", "&fKung&7-&8Fu&7-&eKnowledge", "Sword deals 0 damage||&8&l-&aFists deal massively increased damage||&8&l-&aGain Speed II (5s) every 4th hit", 10000, 40, 100, 9)
+	
+function create_pperk_slot(p:player, slot: integer, pperkName: text, item: text, itemName: text, lore: text, gold: integer, renown: integer, levelUnlock: integer, prestigeUnlock: integer):
+	set {_lorek} to "&8&l-&a{custom-lore}||{cases}"
+	replace all "{custom-lore}" with "%{_lore}%" in {_lorek}
+	set {_uuid} to uuid of {_p}
+	if {pit.%{_uuid}%.level} < {_levelUnlock}:
+		replace all "{cases}" with "&8&l-&cRequiers level %{_levelUnlock}% and prestige %{_prestigeUnlock}% to unlock!" in {_lorek}
+		make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek}
+	else:
+		if {pit.%{_uuid}%.prestige} < {_prestigeUnlock}:
+			replace all "{cases}" with "&8&l-&cRequiers level %{_levelUnlock}% and prestige %{_prestigeUnlock}% to unlock!" in {_lorek}
+			make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek}
+		else:
+			if player_has_perk({_p},{_pperkName}) is true:
+				replace all "{cases}" with "&8&l-&aBought" in {_lorek}
+				make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek}
+			else:
+				set {_x} to "&8&l-&aCost: &6{gold}g&a, &e{renown} renown"
+				replace all "{gold}" with "%{_gold}%" in {_x}
+				replace all "{renown}" with "%{_renown}%" in {_x}
+				replace all "{cases}" with "%{_x}%" in {_lorek}
+				make a gui slot {_slot} of {_p} with {_item} parsed as item with name {_itemName} with lore {_lorek} to close then run function pit_pperk_shop({_p}):
+					if gold({_p}, "has", {_gold}) is true:
+						if renown({_p}, "has", {_renown}) is true:
+							gold({_p}, "remove", {_gold})
+							renown({_p}, "remove", {_renown})
+							set {perks.%{_uuid}%.%{_pperkName}%} to true
+							pit_pperk_shop({_p})
+							pit_scoreboard({_p})
+							send "{@messagePerkBought}" to {_p}
+						else:
+							send "{@messagePerkNotEnoughGold}" to {_p}
+					else:
+						send "{@messagePerkNotEnoughGold}" to {_p}
+			
+function renown(p: player , action: text, x: integer) :: boolean:
+	set {_uuid} to uuid of {_p}
+	if {_action} is "has":
+		if {pit.%{_uuid}%.renown} >= {_x}:
+			return true
+		else:
+			return false
+	if {_action} is "remove":
+		remove {_x} from {pit.%{_uuid}%.renown}
+	
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#               COMMANDS				  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+command /pit [<text>] [<player>] [<integer>]:
+	trigger:
+		if arg-1 is not set:
+			make player execute command "pit help"
+			stop
+		if arg-1 is "help":
+			send " "
+			send "&7&l&m------------------&r  &e&lTHE PIT  &7&l&m------------------"
+			send "{@cmdPrefix} {@cmdColor}spawn"
+			send "{@cmdPrefix} {@cmdColor}rankup &8( &eon level &b120&e, rankup to the next &bprestige&8 )"
+			if player have permission "pit.admin":
+				send " "
+				send "{@cmdPrefix} {@cmdColor}Reload"
+				send " "
+				send "&8&l[&e&l!&8&l]&7Commands for balance:"
+				send "{@cmdPrefix} {@cmdColor}AddGold {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetGold {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetLevel {@pn}"
+				send "{@cmdPrefix} {@cmdColor}AddXP {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetPrestige {@pn}"
+				send "{@cmdPrefix} {@cmdColor}AddRenown {@pn}"
+				send "{@cmdPrefix} {@cmdColor}SetRenown {@pn}"
+				send "{@cmdPrefix} {@cmdColor}ResetStats &8( &eresets only kills, assists, deaths, max-streak &8)"
+				send "{@cmdPrefix} {@cmdColor}cl &8( &eclear your perks, upgrades &8)"
+				send " "
+				send "&8&l[&e&l!&8&l]&7Comands for citizens:"
+				send "{@cmdPrefix} {@cmdColor}SetShop"
+				send "{@cmdPrefix} {@cmdColor}SetPerkShop"
+				send "{@cmdPrefix} {@cmdColor}SetRenownShop"
+				send "{@cmdPrefix} {@cmdColor}SetStats"
+				send " "
+				send "&8&l[&e&l!&8&l]&7Commands for gold spawning:"
+				send "{@cmdPrefix} {@cmdColor}SpawnGold"
+				send "{@cmdPrefix} {@cmdColor}RemoveSpawnGold"
+				send "{@cmdPrefix} {@cmdColor}ListSpawnGold"
+				send "{@cmdPrefix} {@cmdColor}ToggleGoldspawning"
+				send " "
+			stop
+		if arg-1 is "spawn":
+			if {pit.%uuid of player%.status} is "&aIdling":
+				remove all golden_apple from player
+				remove all heads from player
+				teleport player to {pit.spawn}
+				stop
+			else:
+				send "&cYou are in fight!"
+				stop
+		if arg-1 is "rankup":
+			if {pit.%uuid of player%.level} is 120:
+				if {pit.%uuid of player%.xp-need} is 0:
+					if {pit.%uuid of player%.prestige} >= 30:
+						send "&cYou are on &4Max &cprestige level!"
+						stop
+					else:
+						delete_passive_upgrades_when_prestige(player)
+						add 10 to {pit.%uuid of player%.renown}
+						add 1 to {pit.%uuid of player%.prestige}
+						set {pit.%uuid of player%.level} to 1
+						set {pit.%uuid of arg-2%.xp-need} to 100*{pit.%uuid of arg-2%.level}
+						pit_nametag(player)
+						pit_scoreboard(player)
+						stop
+				else:
+					send "&cYou must have &b0 &cneeded xp to rankup!"
+					stop
+			else:
+				send "&cYou must have level &b120 &cto rankup!"
+				stop
+		if player have permission "pit.admin":
+			if arg-1 is "reload":
+				make player execute command "skript reload ThePit"
+				stop
+			if arg-1 is "setspawn":
+				set {pit.spawn} to player's location
+				send "&bSpawn &7setted" to player
+				stop
+			if arg-1 is "setgold":
+				if arg-2 is set:
+					if arg-3 is set:
+						set {pit.%uuid of arg-2%.gold} to arg-3
+						send "&7Setted &6%arg-2%&7's gold to &6%arg-3%&7!"
+						pit_scoreboard(arg-2)
+						stop
+					else:
+						send "&cSyntax error!"
+						stop
+				else:
+					send "&cSyntax error!"
+					stop
+			if arg-1 is "setrenown":
+				if arg-2 is set:
+					if arg-3 is set:
+						set {pit.%uuid of arg-2%.renown} to arg-3
+						send "&7Setted &6%arg-2%&7's renown to &6%arg-3%&7!"
+						stop
+					else:
+						send "&cSyntax error!"
+						stop
+				else:
+					send "&cSyntax error!"
+					stop
+			if arg-1 is "addgold":
+				if arg-2 is set:
+					if arg-3 is set:
+						add arg-3 to {pit.%uuid of arg-2%.gold} 
+						send "&7Added &6%arg-3% &7gold to &6%arg-2%&7's gold!"
+						pit_scoreboard(arg-2)
+						stop
+					else:
+						send "{@error}"
+						stop
+				else:
+					send "{@error}"
+					stop
+			if arg-1 is "addrenown":
+				if arg-2 is set:
+					if arg-3 is set:
+						add arg-3 to {pit.%uuid of arg-2%.renown} 
+						send "&7Added &6%arg-3% &7renown to &6%arg-2%&7's renowns!"
+						stop
+					else:
+						send "{@error}"
+						stop
+				else:
+					send "{@error}"
+					stop
+			if arg-1 is "setlevel":
+				if arg-2 is set:
+					if arg-3 is set:
+						if arg-3 > 120:
+							send "&cMax level is &b120&c!"
+						else:
+							set {pit.%uuid of arg-2%.level} to arg-3
+							set {pit.%uuid of arg-2%.xp} to 0
+							set {pit.%uuid of arg-2%.xp-need} to 100*{pit.%uuid of arg-2%.level}
+							pit_nametag(arg-2)
+							pit_scoreboard(arg-2)
+							send "&7Setted &b%arg-2%&7's level to &b%arg-3%&7!"
+						stop
+					else:
+						send "{@error}"
+						stop
+				else:
+					send "{@error}"
+					stop
+			if arg-1 is "addxp":
+				if arg-2 is set:
+					if arg-3 is set:
+						set {_uuid} to uuid of arg-2
+						remove arg-3 from {pit.%{_uuid}%.xp-need}
+						pit_check_level(arg-2)
+						stop
+					else:
+						send "{@error}"
+						stop
+				else:
+					send "{@error}"
+					stop
+			if arg-1 is "setprestige":
+				if arg-2 is set:
+					if arg-3 is set:
+						if arg-3 > 30:
+							send "&cMax prestige is &430&c!"
+						else:
+							set {pit.%uuid of arg-2%.prestige} to arg-3
+							pit_nametag(arg-2)
+							pit_scoreboard(arg-2)
+							send "&7Setted &b%arg-2%&7's prestige to &b%arg-3%&7!"
+						stop
+					else:
+						send "{@error}"
+						stop
+				else:
+					send "{@error}"
+					stop
+			if arg-1 is "resetstats":
+				if arg-2 is set:
+					set {_uuid} to uuid of arg-2
+					set {pit.%{_uuid}%.kills} to 0
+					set {pit.%{_uuid}%.deaths} to 0
+					set {pit.%{_uuid}%.assists} to 0
+					set {pit.%{_uuid}%.max-streak} to 0
+					send "&7%arg-2%'s stats were reseted!"
+					stop
+				else:
+					send "{@error}"
+					stop
+			if arg-1 is "spawngold":
+				send "&a&lAdded &6&lgold spawn"
+				add player's location to {gold-spawn::*}
+				stop
+			if arg-1 is "removespawngold":
+				send "&c&lRemoved &6&lgold spawn"
+				set {_x} to size of {gold-spawn::*}
+				remove {gold-spawn::%{_x}%} from {gold-spawn::*}
+				stop
+			if arg-1 is "listspawngold":
+				send "&6&lGold &7will spawn at:"
+				loop {gold-spawn::*}:
+					send "&8&l[&4&l%loop-index%&8&l] &7%loop-value%" to player
+				stop
+			if arg-1 is "setspawnedgoldvalue":
+				send "&7&lSpawned gold value set to &6&l%number arg%g" to player
+				set {spawnedGoldValue} to number arg-2
+				stop
+			if arg-1 is "togglegoldspawning":
+				if {spawning} is 1:
+					set {spawning} to 2
+					send "&7Toggled &4&loff" to player
+				else:
+					set {spawning} to 1
+					send "&7Toggled &2&lon" to player
+				stop
+			if arg-1 is "setshop":
+				if citizen id of target entity is set:
+					set {SHOP-ID} to citizen id of target entity
+					send "&7Shop set"
+					stop
+			if arg-1 is "setperkshop":
+				if citizen id of target entity is set:
+					set {PERK-SHOP-ID} to citizen id of target entity
+					send "&7Perk Shop set!"
+					stop
+			if arg-1 is "setstats":
+				if citizen id of target entity is set:
+					set {PIT-STATS-ID} to citizen id of target entity
+					send "&7Stats set!"
+				stop
+			if arg-1 is "setrenownshop":
+				if citizen id of target entity is set:
+					set {PIT-RENOWN-SHOP-ID} to citizen id of target entity
+					send "&7Renown Shop set!"
+				stop
+			if arg-1 is "cl":
+				delete_passive_upgrades_when_prestige(player)
+				clear {perks.%uuid of player%.barbarian}
+				clear {perks.%uuid of player%.dirty}
+				clear {perks.%uuid of player%.rambo}
+				clear {perks.%uuid of player%.olympus}
+				clear {perks.%uuid of player%.kung-fu-knowledge}
+				send "&7&lPerks, upgrades &8&l-> &c&ldeleted!" to player
+				stop
+			send "{@error}"
+		else:
+			send "&cYou do not have permission to perform this command!"
+					
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+#             ON SOME EVENTS			  #
+#-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-#
+on script load:
+	delete {START-KIT::*}
+	add unbreakable iron_chestplate to {START-KIT::1::*}
+	add unbreakable chain_leggings to {START-KIT::1::*}
+	add unbreakable chain_boots to {START-KIT::1::*}
+	add unbreakable chain_chestplate to {START-KIT::2::*}
+	add unbreakable iron_leggings to {START-KIT::2::*}
+	add unbreakable chain_boots to {START-KIT::2::*}
+	add unbreakable chain_chestplate to {START-KIT::3::*}
+	add unbreakable chain_leggings to {START-KIT::3::*}
+	add unbreakable iron_boots to {START-KIT::3::*}
+	delete {PRESTIGES::*}
+	add "&9I","&9II","&9III","&9IV","&eV","&eVI","&eVII","&eVIII","&eIX","&6X","&6XI","&6XII","&6XIII","&6XIV","&cXV","&cXVI","&cXVII","&cXVIII","&cXIX","&6XX","&6XXI","&6XXII","&6XXIII","&6XXIV","&dXXV","&dXXVi","&dXXVII","&dXXVIII", "&dXXIX" and "&4MAX" to {PRESTIGES::*}
+	if {spawnedGoldValue} is not set:
+		set {spawnedGoldValue} to 10
+	if {spawning} is not set:
+		set {spawning} to 2
+on join:
+	pit_join(player)
+on quit:
+	set {_uuid} to uuid of player
+	delete stylish scoreboard "PIT-%player%"
+	delete {pit.%{_uuid}%.streak}
+	delete {pit.%{_uuid}%.state}
+	delete {pit.%{_uuid}%.damage::*}
+	make console execute command "nte player %player% clear"	
+on chat:
+	cancel event
+	set {_x} to {@chat-format}
+	replace all "{color}" with pit_get_color(player) in {_x} 
+	replace all "{prestige}" with pit_get_prestige_color(player) in {_x}
+	replace all "{level}" with "%{pit.%uuid of player%.level}%" in {_x}
+	replace all "{player}" with "%player%" in {_x}
+	replace all "{prefix}" with player's prefix in {_x}			
+	replace all "&" with " " in message	
+	replace all "{message}" with message in {_x} 	
+	broadcast "%{_x}%"
+on place:
+	if player does not have permission "pit.admin":
+		if event-block is obsidian:
+			set {_uuid} to uuid of player
+			set {_lvl} to {passive-upgrades.%{_uuid}%.build-battler}
+			if {_lvl} is 0:
+				wait 120 seconds
+			else:
+				if {_lvl} is 1:
+					wait 192 seconds
+				else:
+					if {_lvl} is 2:
+						wait 204 seconds
+					else:
+						if {_lvl} is 3:
+							wait 198 seconds
+						else:
+							if {_lvl} is 4:
+								wait 228 seconds
+							else:
+								if {_lvl} is 5:
+									wait 240 seconds
+			set event-block to air
+		else:
+			if event-block is lava:	
+				wait 5 seconds
+				set event-block to air
+			else:
+				cancel event
+	else:
+		if event-block is obsidian:
+			set {_uuid} to uuid of player
+			set {_lvl} to {passive-upgrades.%{_uuid}%.build-battler}
+			if {_lvl} is 0:
+				wait 120 seconds
+			else:
+				if {_lvl} is 1:
+					wait 192 seconds
+				else:
+					if {_lvl} is 2:
+						wait 204 seconds
+					else:
+						if {_lvl} is 3:
+							wait 198 seconds
+						else:
+							if {_lvl} is 4:
+								wait 228 seconds
+							else:
+								if {_lvl} is 5:
+									wait 240 seconds
+			set event-block to air
+		else:
+			if event-block is lava:	
+				wait 5 seconds
+				set event-block to air
+on right click with head:
+	if name of event-item is "&6&lGolden Head":
+		cancel event
+		remove regeneration from player
+		remove absorption from player
+		apply regeneration 2 to the player for 5 seconds
+		apply absorption 1 to the player for 120 seconds
+		remove 1 of event-item from player
+on right click on entity:
+	if citizen id of event-entity is {SHOP-ID}:
+		pit_shop(player)
+	else:
+		if citizen id of event-entity is {PERK-SHOP-ID}:
+			pit_perk_shop(player)
+		else:
+			if "%entity%" is "blaze":
+				make player execute command "hub"
+			else:
+				if citizen id of event-entity is {PIT-STATS-ID}:
+					pit_stats(player)
+				else:
+					if citizen id of event-entity is {PIT-RENOWN-SHOP-ID}:
+						pit_pperk_shop(player)
+on right click on ender_chest:
+	if {pit.%uuid of player%.level} < {@ender_chest_min_level}:
+		send "&cYou must have at least level &b15 &cto open it!"
+		cancel event
+on right click with water bottle:
+	remove water bottle from player's inventory
+	apply speed 1 to player for 24 seconds
+	apply regeneration 3 to player for 10 seconds
+	apply resistance 2 to player for 4 seconds
+	set {_uuid} to uuid of player
+	add 40 to {pit.%{_uuid}%.xp-need}
+	pit_scoreboard(player)
+on every {@delayBetweenGoldSpawn} seconds:
+	if {spawning} is 1:
+		loop {gold-spawn::*}:
+			drop 1 gold ingot named "&6&lGold" at loop-value
+on pickup:
+	if event-item is arrow:
+		cancel event
+	if event-item is gold ingot named "&6&lGold":
+		wait 0.1 second
+		set {_x} to amount of gold ingot named "&6&lGold" in player's inventory
+		#loop all items in player's inventory:
+			#if loop-value is gold ingot named "&6&lGold":
+				#delete loop-value
+		remove all gold ingot named "&6&lGold" from player
+		set {_goldValue} to {@spawnedGoldValue} * {_x}
+		if player_use_perk(player, "trickle-down") is true:
+			set {_goldValue} to {_goldValue} * 7
+		send "&6&lGOLD PICKUP! &7from the ground &6%{_goldValue}%g" to player 
+		add {_goldValue} to {pit.%uuid of player%.gold}
+		pit_scoreboard(player)
+on break:
+	if player does not have the permission "pit.admin":
+		event-block is not stationary_lava
+		cancel event
+on block flow:
+	if event-block is lava:
+		cancel event
+on drop:
+	if player does not have permission "pit.admin":
+		cancel event
+on pressure plate:
+	cancel event	
+	push the player upwards at speed 0.4
+	push the player forwards at speed 0.7
+at 18:00:
+	set time to 7:00
+on hunger bar change:
+	cancel event		
+	set player's hunger to 20
+on command:
+	if full command is "spawn":
+		cancel event
+		make player execute command "pit spawn"
+on weather change:
+	cancel event
+	set weather to sun
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
